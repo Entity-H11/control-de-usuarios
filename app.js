@@ -17,11 +17,11 @@ const connection = mysql.createConnection({
 });
 
 
-
++
 //Routing 
 app.get('/', ()=>{
 
-    console.log("bienvenido a probando cosas")
+    console.log("bienvenido a probando cosas we have the next url \n users")
 });
 app.get('/users', (req,res)=>
 {
@@ -31,7 +31,12 @@ app.get('/users', (req,res)=>
     
     connection.query(sql,(err,results)=>{
         if (err) throw err;
-        res.send(results);
+        
+        if (results.length > 0){
+            res.json(results);
+        }else{
+            res.send("We dont have any thing");
+        }
     });
 
 });
@@ -41,11 +46,17 @@ app.get('/users/:id', (req,res)=>{
 
     connection.query(sql,req.params.id,(err,results)=>{
         if (err) throw err;
-        res.send(results);
-    })
+
+        if (results.length > 0){
+            res.json(results);
+        }else{
+            res.send("We dont have it");
+        }
+    });
+    
 });
 
-app.post('/add', (req,res)=>{
+app.post('/users/add', (req,res)=>{
   //const UserColums =['nombre', 'email','clave','rol_id'];
   const UserValues = {
       nombre : req.body.nombre,
@@ -63,28 +74,52 @@ app.post('/add', (req,res)=>{
    
 
 });
-app.put('/modify/:id',(req,res)=>{
+app.put('/users/modify/:id',(req,res)=>{
 
-    let id = req.params.id;
+    let {id} = req.params;
     let {nombre,email,clave,rol_id} = req.body;
     
-    const sql = `UPDATE usuarios SET nombre = '${nombre}', email = '${email}', clave = '${clave}', rol_id = '${rol_id}', fecha = now()  WHERE id_usuario =${id}` 
-    connection.query(sql,(err,results)=>{
+    const updateQuery = `UPDATE usuarios SET nombre = '${nombre}', email = '${email}', clave = '${clave}', rol_id = '${rol_id}', fecha = now()  WHERE id_usuario =${id}` ; // user update for name, email, password and rol_id
+    const validationQuery = `SELECT * FROM usuarios WHERE id_usuario = ${id}`; // existing user validation 
+    
+    connection.query(validationQuery, (err,results)=>{
 
         if (err) throw err;
-        res.send("termino");
+        if (results.length > 0){
+
+            connection.query(updateQuery, (err,result)=>{
+                if(err) throw err;
+                res.send(`changed ${result.changedRows} row`);
+            });
+        }else {
+            res.send(`Sorry, the row ${id}doesn't exists`);
+        }
+
     });
     //res.send(`hola mundo num. ${req.params.id}`);
 
+
+
 });
-app.delete('/delete/:id', (req,res)=>{
+app.delete('/users/delete/:id', (req,res)=>{
 
     const id = req.params.id;
-    const sql = `DELETE FROM usuarios WHERE id_usuario =${id}`;
+
+    const validationQuery = `SELECT * FROM usuarios WHERE id_usuario = ${id}`; // existing user validation 
+    const deleteQuery = `DELETE FROM usuarios WHERE id_usuario =${id}`;
    //res.send(`adios mundo num. ${req.params.id}`);
-    connection.query(sql,(err,results)=>{
-            if (err) throw err;
-            res.send("acabas de eliminar al NO." + id);
+    connection.query(validationQuery, (err,results)=>{
+           if (err) throw err;
+
+           if (results.length > 0){
+
+            connection.query(deleteQuery, (err,result)=>{
+                if(err) throw err;
+                res.send(`deleted ${result.affectedRows} row`);
+            });
+        }else {
+            res.send(`Sorry, the row ${id}doesn't exists... so you cant delete it `);
+        }
     });
 });
 
